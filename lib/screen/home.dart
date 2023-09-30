@@ -3,19 +3,41 @@ import 'package:flutter_rest_api_4/model/user.dart';
 import 'package:flutter_rest_api_4/services/user_api.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({Key? key}) : super(key: key);
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
   List<User> users = [];
+  bool isLoading = false;
+  String error = '';
 
   @override
   void initState() {
     super.initState();
-    fetchUsers();
+    _fetchUsers();
+  }
+
+  Future<void> _fetchUsers() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final response = await UserApi.fetchUsers();
+      setState(() {
+        users = response;
+        isLoading = false;
+        error = '';
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        error = 'Failed to fetch users';
+      });
+    }
   }
 
   @override
@@ -24,28 +46,35 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text("Flutter Rest API 4"),
       ),
-      body: ListView.builder(
-        itemCount: users.length,
-        itemBuilder: (content, index){
-          final user = users[index];
-
-          return ListTile(
-            leading: Text(user.fullName),
-            trailing: Text(user.nat),
-            title: Text(user.phone),
-            subtitle: Text(user.email),
-          );
-        }
-        ),
+      body: _buildBody(),
     );
   }
-  
-  Future<void> fetchUsers() async{
-    final response = await UserApi.fetchUsers();
-    setState(() {
-      users = response;
-    });
-  }
 
-  
+  Widget _buildBody() {
+    if (isLoading) {
+      return Center(child: CircularProgressIndicator());
+    } else if (error.isNotEmpty) {
+      return Center(child: Text(error));
+    } else {
+      return ListView.builder(
+        itemCount: users.length,
+        itemBuilder: (context, index) {
+          final user = users[index];
+
+          return Card(
+            elevation: 2.0,
+            margin: const EdgeInsets.all(8.0),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundImage: NetworkImage(user.picture.thumbnail),
+              ),
+              title: Text(user.fullName),
+              subtitle: Text(user.email),
+              trailing: Text(user.nat),
+            ),
+          );
+        },
+      );
+    }
+  }
 }
